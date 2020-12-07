@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!-- This is built from a template for a generic Internet Draft. Suggestions for
+     improvement welcome - write to Brian Carpenter, brian.e.carpenter @ gmail.com 
+     This can be converted using the Web service at http://xml.resource.org/ -->
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<!-- You want a table of contents -->
+<!-- Use symbolic labels for references -->
+<!-- This sorts the references -->
+<!-- Change to "yes" if someone has disclosed IPR for the draft -->
+<!-- This defines the specific filename and version number of your draft (and inserts the appropriate IETF boilerplate -->
+<?rfc sortrefs="yes"?>
+<?rfc toc="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<?rfc topblock="yes"?>
+<?rfc comments="no"?>
+<rfc category="std" docName="draft-li-6man-hbh-fwd-hdr-01" ipr="trust200902">
+  <front>
+    <title abbrev="HBH Forwarding Options Header">Hop-by-Hop Forwarding Options Header</title>
+
+    <author fullname="Zhenbin Li" initials="Z." surname="Li">
+      <organization>Huawei</organization>
+
+      <address>
+        <postal>
+          <street/>
+
+          <city>Beijing</city>
+
+          <code>100095</code>
+
+          <country>China</country>
+        </postal>
+
+        <email>lizhenbin@huawei.com</email>
+      </address>
+    </author>
+
+
+    <author fullname="Shuping Peng" initials="S." surname="Peng">
+      <organization>Huawei</organization>
+
+      <address>
+        <postal>
+          <street/>
+
+          <city>Beijing</city>
+
+          <code>100095</code>
+
+          <country>China</country>
+        </postal>
+
+        <email>pengshuping@huawei.com</email>
+      </address>
+    </author>
+
+    <author fullname="Gyan Mishra" initials="G." surname="Mishra">
+      <organization>Verizon Inc.</organization>
+
+      <address>
+        <postal>
+          <street/>
+
+          <city/>
+
+          <code/>
+
+          <country>China</country>
+        </postal>
+
+        <email>gyan.s.mishra@verizon.com</email>
+      </address>
+    </author>
+
+    <!---->
+
+    <date day="1" month="December" year="2020"/>
+
+    <area>Networking</area>
+
+    <workgroup>Network Working Group</workgroup>
+
+    <abstract>
+     <t>RFC8200 specifies the HBH header that is assumed to be processed by each hop in the delivery path of the packet. However, RFC8200 also expects that nodes processing the HBH header have been explicitly configured to do so. Therefore, it cannot be assumed that a HBH header present in the packet is processed. It all depends on the configuration of each node across the path. Moreover, in most of networks today, the processing of the HBH header is done in the control plane (slow processing path) which incurs several limitations among which resources consumption and security risk.
+
+</t>
+
+<t>For these reasons, over time, the Hop-by-Hop Options header has been sparsely used without any form of large scale deployment. Also, most of already defined HBH options are forwarding options which contain forwarding plane information that needs not to be sent to the control plane.</t>
+
+<t>This document proposes a new Hop-by-Hop Forwarding Options Header in order to carry Hop-by-Hop options that are solely intended to and processed by the forwarding plane. This new HBH header is confined in and dedicated to the forwarding plane while the current HBH header can still be used for control plane options.</t>
+    </abstract>
+
+    <note title="Requirements Language">
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+      "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+      document are to be interpreted as described in <xref
+      target="RFC2119">RFC 2119</xref>.</t>
+    </note>
+  </front>
+
+  <middle>
+    <section title="Introduction">
+      <t>As specified in [RFC8200], the Hop-by-Hop (HBH) Options header is used to carry optional information that will be examined and processed by every node along a packet's delivery path if it is explicitly configured to do so. Since there is no specification on the possible configuration, nodes may be configured to ignore the Hop-by-Hop Options header, drop packets containing a Hop-by-Hop Options header, or assign packets containing a Hop-by-Hop Options header to a slow processing path. [RFC6564] shows the Reports from the field indicating that some IP routers deployed within the global Internet are configured either to ignore or to drop packets having a hop-by-hop header. As stated in [RFC7872], many network operators perceive HBH Options to be a breach of the separation between the forwarding and control planes. Therefore, several network operators configured their nodes so to discard all packets containing the HBH Options Extension Header, while others configured nodes to forward the packet but to ignore the HBH Options. [RFC7045] also states that hop-by-hop options are not handled by many high-speed routers or are processed only on a slow path.</t>
+
+      <t>Generally, modern routers maintain the separation between forwarding plane and control plane with plentiful forwarding plane resource but constrained control plane resource. In order to protect the control plane, policies are enforced in order to restrict access from the forwarding plane to the control plane. Some operators severely rate-limit packets containing the HBH Options Extension Header when they are being sent to the control plane which will cause packet drops. 
+
+</t>
+
+<t>The Hop-by-Hop Options can be categorized into Hop-by-Hop Forwarding Options and Hop-by-Hop Control Options, which contains information for the forwarding plane and the control plane of the nodes, respectively. It is necessary and required to separate the two types of Hop-by-Hop options since they require different process procedures. The packets carrying the Hop-by-Hop Forwarding Options are supposed to be maintained in the forwarding plane while the packets carrying the Hop-by-Hop Control Options are supposed to be sent to the control plane. The current Hop-by-Hop Options header specified in [RFC8200] is used to carry both types of Hop-by-Hop options, and there is no way or indicator to separate the processing of the two kinds of Hop-by-Hop options using the current specifications in [RFC8200].</t>
+
+<t>In the current networks, the common implementation is to send all packets containing a HBH header to the control plane even if they contain only pad options (a forwarding option specified in [RFC8200]), resulting in various possible effects such as a risk of a DoS attack on the router, inconsistent drops among those packets due to rate limiting, or other effects. This will impact the normal end-to-end IP forwarding of the network services.
+</t>
+
+<t>Therefore, due to these limitations, the HBH header has seen limited use and deployments, and protocol designers are recommended to avoid using hop-by-hop options in any new protocols. However, there have been over ten HBH options already specified in RFCs as listed in Appendix and the specified Forwarding Options are in the majority. Moreover, as IPv6 is being rapidly and widely deployed worldwide, more and more new services that requires hop-by-hop forwarding process behavior are emerging such as IOAM with IPv6 encapsulation [draft-ietf-ippm-ioam-ipv6-options]. Therefore, these requirements should be addressed urgently and properly by the use of an efficient HBH header when processed in the forwarding plane by transit nodes.</t>
+
+<t>This document proposes a Hop-by-Hop Forwarding Options header to
+   carry the Hop-by-Hop forwarding options while the existing Hop-by-Hop
+   Options header is used to carry the Hop-by-Hop control options only.</t>
+
+    </section>
+
+    <section title="Problem Statement and Motivation">
+      <t>This section describes the problem statement and motivation for
+   defining a new Hop-by-Hop Forwarding Options header.</t>
+
+        <section title="Specifications in RFC8200">
+
+   <t>While [RFC2460] required that all nodes must examine and process the
+   Hop-by-Hop Options header, with [RFC8200] it is expected that nodes
+   along a packet's delivery path only examine and process the Hop-by-
+   Hop Options header if explicitly configured to do so. The configuration of the node determines the HBH processing behavior in the node which implies that each node may have a different behavior than the others. As specified in [RFC8200], nodes may be configured to ignore the Hop-by-Hop Options header or drop packets
+   containing a Hop-by-Hop Options header or assign packets containing
+   a Hop-by-Hop Options header to a slow processing path.  These various
+   behaviors are observed and described in specifications such as
+   [RFC7045] and [RFC7872].  Due to such behaviors, new hop-by-hop
+   options are not recommended in [RFC8200] hence the usability of HBH options
+   is severely limited.</t>    
+  
+<t>The Hop-by-Hop Options header is identified by a Next Header value of
+   zero in the IPv6 header.  Currently, the behaviors performed by the
+   nodes on the packets containing a Hop-by-Hop Options header is only
+   based on the value of this Next Header in the IPv6 header, that is,
+   the value of the Next Header is the only trigger for the behaviors to
+   be performed.</t>
+
+<t>In current networks, usually, nodes are configured in order to assign packets
+   containing a Hop-by-Hop Options header (indicated by the Next Header
+   = 0) to a slow processing path, i.e. to the control plane of the
+   nodes.  Very often, such configuration is embedded in the implementation of the node and cannot be changed or reconfigured.
+</t>
+
+</section>
+
+        <section title="Classification of HBH Options">
+          <t>The Hop-by-Hop Options header contains one or more Hop-by-Hop
+   Options.  Each HBH Option contains a type identifier, i.e. Option
+   Type. The Hop-by-Hop Options can be categorized into two types: HBH Forwarding Options and HBH Control Options. The HBH forward options contain information that is useful to a router's forwarding plane, e.g. the Jumbo Payload
+   Option [RFC2675]. While the HBH Control Options contain information that is useful to a router's control plane, e.g. the Router Alert Option [RFC2711].  Currently, both HBH forwarding and control options are carried in the same HBH Options header.  There is no specification defining rules for differentiating
+   the process of the two kinds of options. </t>
+
+<t>According to the common configuration in the current networks, i.e.
+   to assign packets containing a Hop-by-Hop Options header (indicated
+   by the Next Header = 0) to a slow processing path, all the HBH
+   Options will be sent to the control plane of the nodes.  It impacts
+   the normal IP forwarding procedure of the packets containing the HBH
+   forwarding options which should be processed in the forwarding
+   plane. As stated above, it also introduces a severe risk of DoS attacks using HBH headers.</t>
+
+<t>If all the HBH Options are forced to be processed first in the
+   forwarding plane and then classified according to the HBH Option
+   Type, it requires the consumption of the forwarding plane resources
+   to make such processing selection, which will impact the forwarding
+   efficiency.  Moreover, there are some existing nodes that are
+   configured to assign the packets containing a Hop-by-Hop Options
+   header to the control plane of the nodes cannot be reconfigured.</t>
+
+<t>Appendix of this document provides the classification of the
+   currently defined HBH options into HBH forwarding options and HBH
+   control options, and the HBH forwarding options are in the majority.
+</t>     
+                  </section>
+
+        <section title="Service Requirements">
+<t>As listed in the Appendix, there have been over ten HBH options already specified in RFCs and the specified forwarding options are in the majority. As IPv6 is being rapidly and widely deployed worldwide, more and more applications and network services are migrating to or adopting IPv6. More and more new services that requires hop-by-hop forwarding process behavior are emerging and the HBH Options header is going to be utilized by new services in various use scenarios.</t>
+
+<t>As more services start utilizing the HBH Options header, more packets containing HBH Options are going to be injected into the networks. According to the current common configuration in most network deployments, all the packets of the new services are going to be sent to the control plane of the nodes, with the possible consequence of causing a DoS effect on the control plane.  The packets will be dropped and the normal IP forwarding may be severely impacted. The deployment of new network services involving multi-vendor interoperability will become impossible.</t>
+
+<t>In-situ OAM with IPv6 encapsulation [draft-ietf-ippm-ioam-ipv6-options] is one of the examples. IOAM in IPv6 is used to enhance diagnostics of IPv6 networks and complements other mechanisms, such as the IPv6 Performance and Diagnostic Metrics Destination Option described in [RFC8250]. The IOAM data fields are encapsulated in "option data" fields of the Hop-by-Hop Options header if Pre-allocated Tracing Option, Incremental Tracing Option, or Proof of Transit Option are carried [I-D.ietf-ippm-ioam-data], that is, the IOAM performs per hop.</t>
+
+<t>As above mentioned, according to the current common configuration, all the packets employing IOAM are going to be sent to the control plane of every node along the path, it will cause a severe effect DoS on the control plane. The packets will be inconsistently dropped and the normal IP forwarding will be severely impacted. The end-to-end deployment of IOAM in a network involving nodes from multiple vendors is impossible.</t>
+
+
+    </section>
+</section>
+
+
+<section title="Proposal">
+
+<section title="Hop-by-Hop Forwarding Options Header">
+
+<t>We propose to define a new HBH Forwarding Options header dedicated 
+   to carry the HBH Forwarding Options.  The IPv6 packets containing
+   this Hop-by-Hop Forwarding Options header will be only processed in the forwarding plane and MUST NOT be sent to the control plane of the
+   network nodes. 
+</t>
+
+<t>The Hop-by-Hop Forwarding Options header is identified by a Next
+   Header value of TBD in the IPv6 header and has the following format:
+</t>
+
+          <figure align="center"
+                  >
+            <artwork type="ascii-art">
+   
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |  Next Header  |  Hdr Ext Len  |                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
+    |                                                               |
+    .                                                               .
+    .                     HBH Forwarding Options                    .
+    .                                                               .
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+      Next Header         8-bit selector.  Identifies the type of header
+                          immediately following the Hop-by-Hop 
+                          Forwarding Options header.  
+
+      Hdr Ext Len         8-bit unsigned integer.  Length of the
+                          Hop-by-Hop Forwarding Options header in 8-octet 
+                          units, not including the first 8 octets.
+
+      Options             Variable-length field, of length such that the
+                          complete Hop-by-Hop Options header is an
+                          integer multiple of 8 octets long.  Contains
+                          one or more TLV-encoded HBH forwarding options.
+ </artwork>
+          </figure>
+      
+<t>The Hop-by-Hop Forwarding Options header is recommended to be placed immediately after the IPv6 header.</t>
+
+<t>The Hop-by-Hop Forwarding Options follows the formatting guidelines specified in the Appendix A. of [RFC8200].</t>
+                  </section>
+
+<section title="The usage of the existing Hop-by-Hop Options Header">
+          <t>The existing Hop-by-Hop Options Header, identified by a Next Header
+   value of zero in the IPv6 header, can still be used for carrying the HBH
+   control options.  The IPv6 packets carrying such HBH control options
+   will be sent to the control plane anyway, so it follows the exact
+   current processing procedures.</t>
+      
+     </section>
+
+
+    </section>
+
+
+    <section anchor="Security" title="Security Considerations">
+      <t>It is the same as the Security Considerations in [RFC8200] for the
+   part related with the HBH Options header.</t>
+    </section>
+
+    <section anchor="IANA" title="IANA Considerations">
+
+<t>TBD: Next Header for Hop-by-Hop Forwarding Options Header </t>
+
+
+    </section>
+
+<section title="Appendix. Existing HBH Options">
+<t>We further classify the HBH Options into HBH Forwarding and HBH Control Options. We can see that among all the defined HBH Options the HBH Forwarding Options are in the majority. </t>
+      <t>HBH Forwarding Options: </t>
+<t><list style="symbols">
+<t>PAD Options: PAD1 and PADn [RFC8200]</t>
+<t>Jumbo Payload [RFC2675]</t>
+<t>RPL Option [RFC6553]</t>
+<t>Common Architecture Label 1Pv6 Security Option [RFC5570]</t>
+<t>SMF Option [RFC6621]</t>
+<t>MPL Option [RFC7731]</t>
+<t>DFF Option [RFC6971]</t>
+<t>MTU Option <xref target="I-D.ietf-6man-mtu-option"/></t>
+<t>AltMark Option <xref target="I-D.ietf-6man-ipv6-alt-mark"/></t>
+</list></t>
+
+      <t>HBH Control Options: </t>
+<t><list style="symbols">
+<t>Router Alert Option [RFC2711]</t>
+<t>Quickstart Option [RFC4782]</t>
+</list></t>
+    </section>
+
+  </middle>
+
+  <back>
+    <references title="Normative References">
+      <?rfc include="reference.RFC.2119"?>
+<?rfc include="reference.RFC.8200"?>
+<?rfc include="reference.RFC.7045"?>
+<?rfc include="reference.RFC.7872"?>
+    </references>
+
+    <references title="Informative References">
+<?rfc include="reference.RFC.2675"?>
+<?rfc include="reference.RFC.2711"?>
+<?rfc include="reference.RFC.6553"?>
+<?rfc include="reference.RFC.5570"?>
+<?rfc include="reference.RFC.6621"?>
+<?rfc include="reference.RFC.7731"?>
+<?rfc include="reference.RFC.6971"?>
+<?rfc include="reference.RFC.4782"?>
+
+      <?rfc include="reference.I-D.ietf-6man-mtu-option"?>
+
+      <?rfc include="reference.I-D.ietf-6man-ipv6-alt-mark"?>
+
+    </references>
+
+  </back>
+</rfc>
